@@ -38,11 +38,13 @@
         'cameraUp': [0, -1, -.17],
         'initialCameraPosition': [-5, -1, -1],
         'initialCameraLookAt': [-1.72477, 0.05395, -0.00147],
-        'sphericalHarmonicsDegree': 2
+        'sphericalHarmonicsDegree': 2,
+        'freeIntermediateSplatData': true,
+        'sharedMemoryForWorkers': false
     });
     let path = 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/truck' + (mode ? '_high' : '') + '.ksplat';
     viewer.addSplatScene(path, {
-      'progressiveLoad': false
+      'progressiveLoad': true
     })
     .then(() => {
         viewer.start();

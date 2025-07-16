@@ -34,13 +34,15 @@
     const viewer = new GaussianSplats3D.Viewer({
       'initialCameraLookAt': [0.20786, -0.68154, -0.27311],
       'webXRMode': GaussianSplats3D.WebXRMode.AR,
+      'freeIntermediateSplatData': true,
       'sharedMemoryForWorkers': false
     });
     let path = 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/bonsai_high.ksplat';
     viewer.addSplatScene(path, {
         'rotation': new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0.01933, -0.75830, -0.65161).normalize(), new THREE.Vector3(0, 1, 0)).toArray(),
         'scale': [0.25, 0.25, 0.25],
-        'position': [0, 0.5, 0]
+        'position': [0, 0.5, 0],
+        'progressiveLoad': true
     })
     .then(() => {
         viewer.start();

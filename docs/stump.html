@@ -39,11 +39,12 @@
         'initialCameraPosition': [-3.3816, 1.96931, -1.71890],
         'initialCameraLookAt': [-0.04979, 1.37519, 1.13443],
         'sphericalHarmonicsDegree': 2,
+        'freeIntermediateSplatData': true,
         'sharedMemoryForWorkers': false
     });
     let path = 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/stump' + (mode ? '_high' : '') + '.ksplat';
     viewer.addSplatScene(path, {
-      'progressiveLoad': false
+      'progressiveLoad': true
     })
     .then(() => {
         viewer.start();

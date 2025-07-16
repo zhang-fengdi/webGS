@@ -92,6 +92,7 @@
     const controls = setupControls(camera, renderer);
 
     const viewer = new GaussianSplats3D.DropInViewer({
+      'freeIntermediateSplatData': true,
       'sharedMemoryForWorkers': false});
     viewer.addSplatScenes([
         {
