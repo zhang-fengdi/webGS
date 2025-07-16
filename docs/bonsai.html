@@ -39,13 +39,14 @@
         'cameraUp': [0.01933, -0.75830, -0.65161],
         'initialCameraPosition': [1.54163, 2.68515, -6.37228],
         'initialCameraLookAt': [0.45622, 1.95338, 1.51278],
-        'sphericalHarmonicsDegree': 2
+        'sphericalHarmonicsDegree': 2,
+        'freeIntermediateSplatData': true
     });
     // let path = 'assets/data/bonsai/bonsai' + (mode ? '_high' : '') + '.ksplat';
     let path = 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/bonsai' 
             + (mode ? '_high' : '') + '.ksplat';
     viewer.addSplatScene(path, {
-      'progressiveLoad': false
+      'progressiveLoad': true
     })
     .then(() => {
         viewer.start();
