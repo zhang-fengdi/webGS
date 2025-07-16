@@ -35,20 +35,21 @@
       'cameraUp': [0, -1, -0.54],
       'initialCameraPosition': [-7.14242, -2.25111, -2.36519],
       'initialCameraLookAt': [1.52976, 2.27776, 1.65898],
-      'dynamicScene': true
+      'dynamicScene': true,
+      'sharedMemoryForWorkers': false
     });
 
     viewer.addSplatScenes([
         {
-          'path': 'assets/data/garden/garden.ksplat',
+          'path': 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/garden.ksplat',
           'splatAlphaRemovalThreshold': 20,
         },
         {
-          'path': 'assets/data/bonsai/bonsai_trimmed.ksplat',
+          'path': 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/bonsai_trimmed.ksplat',
           'splatAlphaRemovalThreshold': 20,
         },
         {
-          'path': 'assets/data/bonsai/bonsai_trimmed.ksplat',
+          'path': 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/bonsai_trimmed.ksplat',
           'splatAlphaRemovalThreshold': 20,
         }
     ], true).then(() => {

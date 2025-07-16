@@ -91,14 +91,15 @@
     const threeScene = setupThreeScene();
     const controls = setupControls(camera, renderer);
 
-    const viewer = new GaussianSplats3D.DropInViewer();
+    const viewer = new GaussianSplats3D.DropInViewer({
+      'sharedMemoryForWorkers': false});
     viewer.addSplatScenes([
         {
-          'path': 'assets/data/garden/garden_high.ksplat',
+          'path': 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/garden_high.ksplat',
           'splatAlphaRemovalThreshold': 20,
         },
         {
-          'path': 'assets/data/bonsai/bonsai_trimmed.ksplat',
+          'path': 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/bonsai_trimmed.ksplat',
           'rotation': [-0.14724434, -0.0761755, 0.1410657, 0.976020],
           'scale': [1.5, 1.5, 1.5],
           'position': [-3, -2, -3.2],

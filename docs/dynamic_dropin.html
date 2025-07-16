@@ -92,19 +92,20 @@
     const controls = setupControls(camera, renderer);
 
     const viewer = new GaussianSplats3D.DropInViewer({
-      'dynamicScene': true
+      'dynamicScene': true,
+      'sharedMemoryForWorkers': false
     });
     viewer.addSplatScenes([
         {
-          'path': 'assets/data/garden/garden.ksplat',
+          'path': 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/garden.ksplat',
           'splatAlphaRemovalThreshold': 20,
         },
         {
-          'path': 'assets/data/bonsai/bonsai_trimmed.ksplat',
+          'path': 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/bonsai_trimmed.ksplat',
           'splatAlphaRemovalThreshold': 20,
         },
         {
-          'path': 'assets/data/bonsai/bonsai_trimmed.ksplat',
+          'path': 'https://webgs-data-1369614263.cos.ap-beijing.myqcloud.com/bonsai_trimmed.ksplat',
           'splatAlphaRemovalThreshold': 20,
         }
     ], true).then(() => {
