@@ -1,0 +1,1 @@
+docs/assets/data/**/*.ksplat filter=lfs diff=lfs merge=lfs -text
