@@ -1,0 +1,47 @@
+name: 📦 Build & Deploy to docs/
+
+# 每次 push 到 main 都触发
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 拉取代码，连同 LFS 对象
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      # 2. 配置 Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # 3. 安装依赖 & 构建
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build   # 输出到 build/demo
+
+      # 4. 拷贝 build/demo 到 docs/
+      - name: Copy to docs/
+        run: |
+          rm -rf docs
+          mkdir -p docs
+          cp -r build/demo/* docs/
+
+      # 5. 提交并推回 main 分支
+      - name: Commit & Push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs
+          git diff --quiet --exit-code || git commit -m "🛠️ Update GitHub Pages site"
+          git push origin HEAD:main
