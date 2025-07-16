@@ -6,7 +6,6 @@ on:
     branches:
       - main
 
-# Grant this workflow permission to update repo contents
 permissions:
   contents: write
 
@@ -15,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Check out the repo, including LFS files
+      # 1. Check out your repo (including LFS objects)
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -28,29 +27,29 @@ jobs:
         with:
           node-version: '18'
 
-      # 3. Install NPM dependencies
+      # 3. Install & build
       - name: Install dependencies
         run: npm ci
 
-      # 4. Build your project (outputs into build/demo)
       - name: Build project
-        run: npm run build
+        run: npm run build      # outputs into build/demo
 
-      # 5. Copy the built demo into docs/
-      - name: Copy build/demo → docs/
+      # 4. Copy build output to docs/
+      - name: Copy to docs/
         run: |
           rm -rf docs
           mkdir -p docs
           cp -r build/demo/* docs/
 
-      # 6. Deploy docs/ to the main branch for GitHub Pages
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          # Token with write permission, provided automatically
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          # Publish into the docs/ folder on the main branch
-          publish_branch: main
-          publish_dir: docs
-          # Custom commit message
-          commit_message: '📄 Update GitHub Pages site via CI'
+      # 5. Commit & push docs/ back to main
+      - name: Commit and Push docs/
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs
+          # only commit if there are changes
+          git diff --quiet --exit-code || git commit -m "📄 Update GitHub Pages site via CI"
+          # push using token-based authentication
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:main
