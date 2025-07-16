@@ -41,7 +41,9 @@
         'initialCameraLookAt': [0.45622, 1.95338, 1.51278],
         'sphericalHarmonicsDegree': 2
     });
-    let path = 'assets/data/bonsai/bonsai' + (mode ? '_high' : '') + '.ksplat';
+    // let path = 'assets/data/bonsai/bonsai' + (mode ? '_high' : '') + '.ksplat';
+    let path = 'https://github.com/zhang-fengdi/webGS/releases/download/v1.0-ksplat-data/bonsai' 
+            + (mode ? '_high' : '') + '.ksplat';
     viewer.addSplatScene(path, {
       'progressiveLoad': false
     })
