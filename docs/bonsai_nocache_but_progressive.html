@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3DGS 高级选项卡＋滑块（可配置版）</title>
+  <script type="text/javascript" src="js/util.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./lib/three.module.js",
+      "@mkkellogg/gaussian-splats-3d": "./lib/gaussian-splats-3d.module.js"
+    }
+  }
+  </script>
+  <style>
+    body {
+      background: #f5f5f5;
+      color: #333;
+      font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+    /* 整体 tab 区 */
+    #tab-container {
+      width: 600px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    /* 选项卡栏 */
+    #scene-tabs {
+      display: flex;
+      background: linear-gradient(90deg, #ececec, #f9f9f9);
+      border-bottom: 1px solid #ddd;
+    }
+    #scene-tabs button {
+      flex: 1;
+      padding: 12px 0;
+      background: transparent;
+      border: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    #scene-tabs button:hover {
+      background: #f0f0f0;
+    }
+    #scene-tabs button.active {
+      background: #fff;
+      color: #000;
+      box-shadow: inset 0 -3px 0 #0078d4;
+    }
+    /* 滑块放在选项卡下方，宽度与选项卡一致，居中 */
+    #mode-control {
+      width: 100%;
+      padding: 12px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #fafafa;
+      border-bottom: 1px solid #ddd;
+      gap: 8px;
+    }
+    #mode-control label {
+      font-weight: 500;
+    }
+    #mode-control input[type="range"] {
+      width: 80%;
+      max-width: 400px;
+    }
+    /* 渲染容器 */
+    #viewer-container {
+      width: 100%;
+      height: 300px;
+      background: #000;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <div id="tab-container">
+    <!-- 1. 选项卡 -->
+    <div id="scene-tabs"></div>
+    <!-- 2. 滑块 -->
+    <div id="mode-control">
+      <label for="modeSlider">Lambda：</label>
+      <input type="range" id="modeSlider" />
+      <span id="modeLabel"></span>
+    </div>
+    <!-- 3. 渲染区域 -->
+    <div id="viewer-container"></div>
+  </div>
+
+  <script type="module">
+    import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
+
+    // ====== 全局配置（只需改这里） ======
+    const config = {
+      // fetch 模型的基础 URL
+      baseUrl: 'https://controlgs-data-1369614263.cos.ap-guangzhou.myqcloud.com/',
+      // tab 标签对应的场景名
+      scenes: ['bicycle', 'room', 'playroom', 'chair', 'lego'],
+      // 后缀数组，决定滑块档位
+      suffixes: ['_1e-6', '_9e-7', '_8e-7'],  // 如果只要两个档改为 ['', '_high']
+      // 对应后缀的显示标签（可选）
+      modeLabels: ['1e-6', '9e-7', '8e-7']
+    };
+    // ====================================
+
+    const scenes = config.scenes;
+    const suffixes = config.suffixes;
+    const modeLabels = config.modeLabels;
+
+    const params = new URLSearchParams(window.location.search);
+    let sceneIndex = parseInt(params.get('scene')) || 0;
+    // 确保初始 modeIndex 在合法范围内
+    let modeIndex  = parseInt(params.get('mode'));
+    if (isNaN(modeIndex) || modeIndex < 0 || modeIndex >= suffixes.length) {
+      modeIndex = 0;
+    }
+
+    // 1. 动态生成选项卡
+    const tabsContainer = document.getElementById('scene-tabs');
+    tabsContainer.innerHTML = scenes.map((name, idx) => {
+      return `<button data-index="${idx}">${name}</button>`;
+    }).join('');
+    document.querySelectorAll('#scene-tabs button').forEach(btn => {
+      const idx = parseInt(btn.dataset.index);
+      if (idx === sceneIndex) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        window.location.search = `?scene=${idx}&mode=${modeIndex}`;
+      });
+    });
+
+    // 2. 动态配置滑块
+    const modeSlider = document.getElementById('modeSlider'),
+          modeLabel  = document.getElementById('modeLabel');
+    modeSlider.min   = 0;
+    modeSlider.max   = suffixes.length - 1;
+    modeSlider.step  = 1;
+    modeSlider.value = modeIndex;
+    modeLabel.textContent = modeLabels[modeIndex] || suffixes[modeIndex] || modeIndex;
+    modeSlider.addEventListener('input', e => {
+      const v = parseInt(e.target.value);
+      modeLabel.textContent = modeLabels[v] || suffixes[v] || v;
+    });
+    modeSlider.addEventListener('change', e => {
+      const v = parseInt(e.target.value);
+      window.location.search = `?scene=${sceneIndex}&mode=${v}`;
+    });
+
+    // 3. 创建 Viewer 并加载
+    const container = document.getElementById('viewer-container');
+    const viewer = new GaussianSplats3D.Viewer({
+      rootElement: container,
+      sharedMemoryForWorkers: false,
+      freeIntermediateSplatData: true,
+      cameraUp: [0.01933, -0.75830, -0.65161],
+      initialCameraPosition: [1.54163, 2.68515, -6.37228],
+      initialCameraLookAt: [0.45622, 1.95338, 1.51278],
+      sphericalHarmonicsDegree: 2
+    });
+
+    // 拼接 URL 并加载对应场景
+    const sceneName = scenes[sceneIndex] + suffixes[modeIndex] + '.ply';
+    const url = config.baseUrl + sceneName;
+    viewer.addSplatScene(url, {
+      progressiveLoad: true,
+      showLoadingUI: true
+    })
+    .then(() => viewer.start())
+    .catch(err => console.error('加载失败:', err));
+  </script>
+</body>
+</html>

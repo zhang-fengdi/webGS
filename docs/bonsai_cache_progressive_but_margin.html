@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3DGS 高级选项卡＋滑块（渐进加载&缓存）</title>
+  <script type="text/javascript" src="js/util.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./lib/three.module.js",
+      "@mkkellogg/gaussian-splats-3d": "./lib/gaussian-splats-3d.module.js"
+    }
+  }
+  </script>
+  <style>
+    body { background: #f5f5f5; color: #333; font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 16px; display: flex; justify-content: center; }
+    #tab-container { width: 600px; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
+    #scene-tabs { display: flex; background: linear-gradient(90deg, #ececec, #f9f9f9); border-bottom: 1px solid #ddd; }
+    #scene-tabs button { flex: 1; padding: 12px 0; background: transparent; border: none; font-size: 14px; font-weight: 500; color: #666; cursor: pointer; transition: background 0.2s, color 0.2s; }
+    #scene-tabs button:hover { background: #f0f0f0; }
+    #scene-tabs button.active { background: #fff; color: #000; box-shadow: inset 0 -3px 0 #0078d4; }
+    #mode-control { width: 100%; padding: 12px 0; display: flex; justify-content: center; align-items: center; background: #fafafa; border-bottom: 1px solid #ddd; gap: 8px; }
+    #mode-control label { font-weight: 500; }
+    #mode-control input[type="range"] { width: 80%; max-width: 400px; }
+    #viewer-container { width: 100%; height: 300px; background: #000; position: relative; }
+  </style>
+</head>
+<body>
+  <div id="tab-container">
+    <div id="scene-tabs"></div>
+    <div id="mode-control">
+      <label for="modeSlider">Lambda：</label>
+      <input type="range" id="modeSlider" />
+      <span id="modeLabel"></span>
+    </div>
+    <div id="viewer-container"></div>
+  </div>
+
+  <script type="module">
+    import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
+
+    // ========= 全局配置 =========
+    const config = {
+      baseUrl: 'https://controlgs-data-1369614263.cos.ap-guangzhou.myqcloud.com/',
+      scenes:   ['bicycle', 'room', 'playroom', 'chair', 'lego'],
+      suffixes: ['_1e-6', '_9e-7', '_8e-7'],
+      modeLabels: ['1e-6', '9e-7', '8e-7']
+    };
+
+    const { scenes, suffixes, modeLabels } = config;
+
+    // ========= 解析 URL 参数 =========
+    const params     = new URLSearchParams(window.location.search);
+    let   sceneIndex = parseInt(params.get('scene')) || 0;
+    let   modeIndex  = parseInt(params.get('mode'));
+    if (isNaN(modeIndex) || modeIndex < 0 || modeIndex >= suffixes.length) modeIndex = 0;
+
+    // ========= 1. 生成场景选项卡 =========
+    const tabsContainer = document.getElementById('scene-tabs');
+    tabsContainer.innerHTML = scenes.map((name, idx) =>
+      `<button data-index="${idx}">${name}</button>`
+    ).join('');
+
+    document.querySelectorAll('#scene-tabs button').forEach(btn => {
+      const idx = parseInt(btn.dataset.index);
+      if (idx === sceneIndex) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        window.location.search = `?scene=${idx}&mode=${modeIndex}`;
+      });
+    });
+
+    // ========= 2. 配置滑块 =========
+    const modeSlider = document.getElementById('modeSlider');
+    const modeLabel  = document.getElementById('modeLabel');
+    modeSlider.min   = 0;
+    modeSlider.max   = suffixes.length - 1;
+    modeSlider.step  = 1;
+    modeSlider.value = modeIndex;
+    modeLabel.textContent = modeLabels[modeIndex] || suffixes[modeIndex] || modeIndex;
+
+    modeSlider.addEventListener('input', e => {
+      const v = parseInt(e.target.value);
+      modeLabel.textContent = modeLabels[v] || suffixes[v] || v;
+    });
+    modeSlider.addEventListener('change', e => {
+      const v = parseInt(e.target.value);
+      window.location.search = `?scene=${sceneIndex}&mode=${v}`;
+    });
+
+    // ========= 3. 创建 Viewer =========
+    const container = document.getElementById('viewer-container');
+    const viewer = new GaussianSplats3D.Viewer({
+      rootElement: container,
+      sharedMemoryForWorkers: false,
+      freeIntermediateSplatData: true,
+      cameraUp: [0.01933, -0.75830, -0.65161],
+      initialCameraPosition: [1.54163, 2.68515, -6.37228],
+      initialCameraLookAt: [0.45622, 1.95338, 1.51278],
+      sphericalHarmonicsDegree: 2
+    });
+
+    // 提前启动渲染循环，保证渐进渲染即时生效
+    viewer.start();
+    let viewerStarted = true; // 仅标识用途，后续可扩展
+
+    // ========= 4. 主加载逻辑 =========
+    /**
+     * 加载并渲染场景：
+     *   1) 若已缓存 → 直接读取 blob，progressiveLoad:false。
+     *   2) 若未缓存 → 使用远程 URL，progressiveLoad:true，渲染过程中边下边看；
+     *      下载完毕后再写入 Cache，供下次极速加载。
+     */
+    async function showScene(url, format) {
+      const cache = await caches.open('3d-model-cache');
+      const cachedResp = await cache.match(url);
+
+      if (cachedResp) {
+        const blob = await cachedResp.blob();
+        await viewer.addSplatScene(URL.createObjectURL(blob), {
+          format,
+          progressiveLoad: false,
+          showLoadingUI: true
+        });
+        return; // 极速路径结束
+      }
+
+      // ---------- 未缓存：渐进加载 ----------
+      // 不 await，让渲染循环立即可运行
+      const loadPromise = viewer.addSplatScene(url, {
+        format,
+        progressiveLoad: true,
+        showLoadingUI: true
+      });
+
+      // 等完整下载后再缓存
+      try {
+        await loadPromise; // 确认所有 splats 均已下载
+        const fullResp = await fetch(url, { cache: 'reload' });
+        if (fullResp.ok) {
+          await cache.put(url, fullResp.clone());
+          console.info('[Cache] 已缓存模型:', url);
+        } else {
+          console.warn(`[Cache] 缓存失败（状态码 ${fullResp.status}）:`, url);
+        }
+      } catch (err) {
+        console.warn('[Cache] 缓存阶段出错:', err);
+      }
+    }
+
+    // ========= 5. 启动加载 =========
+    (async () => {
+      try {
+        const sceneFile = scenes[sceneIndex] + suffixes[modeIndex] + '.ply';
+        const url       = config.baseUrl + sceneFile;
+        await showScene(url, GaussianSplats3D.SceneFormat.Ply);
+      } catch (err) {
+        console.error('模型加载失败:', err);
+      }
+    })();
+  </script>
+</body>
+</html>
