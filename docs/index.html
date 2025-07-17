@@ -3,58 +3,112 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>3D 渲染能力评估（ESM 版）</title>
+  <title>设备能力详尽评分</title>
   <style>
-    /* ... 与之前相同的样式 ... */
+    body {
+      margin: 20px;
+      font-family: sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+    h1 { margin-bottom: .5em; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1em;
+    }
+    th, td {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th { background: #f0f0f0; }
+    #final-score {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #0078d4;
+    }
   </style>
 </head>
 <body>
-  <h1>设备 3D 渲染能力评估</h1>
-  <div id="cpu"     class="metric"><span class="label">CPU Cores:</span> <span class="value">Loading…</span></div>
-  <div id="gpuVend" class="metric"><span class="label">GPU Vendor:</span> <span class="value">Loading…</span></div>
-  <div id="gpuRend" class="metric"><span class="label">GPU Renderer:</span> <span class="value">Loading…</span></div>
-  <div id="tier"    class="metric"><span class="label">GPU Tier:</span> <span class="value">Loading…</span></div>
-  <div id="fps"     class="metric"><span class="label">Measured FPS:</span> <span class="value">Loading…</span></div>
-  <div id="score"   class="metric"><span class="label">Composite Score:</span> <span class="value">Loading…</span></div>
+  <h1>设备能力评分细则</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>指标</th>
+        <th>原始值</th>
+        <th>权重系数</th>
+        <th>子得分 = 原始值 × 权重</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>CPU 核心数</td>
+        <td id="cpu-cores">–</td>
+        <td id="cpu-weight">10</td>
+        <td id="cpu-score">–</td>
+      </tr>
+      <tr>
+        <td>设备类型权重</td>
+        <td id="device-type">–</td>
+        <td id="type-weight">–</td>
+        <td id="type-score">–</td>
+      </tr>
+      <tr>
+        <td>GPU Tier</td>
+        <td id="gpu-tier">–</td>
+        <td id="gpu-weight">5</td>
+        <td id="gpu-score">–</td>
+      </tr>
+    </tbody>
+  </table>
 
-  <script type="module">
-    // 1. ESM 方式从 unpkg 加载 getGPUTier :contentReference[oaicite:0]{index=0}
-    import { getGPUTier } from 'https://unpkg.com/detect-gpu@5.0.70/dist/detect-gpu.esm.js';
+  <div id="final-score">综合得分：–</div>
 
-    // 2. CPU 核心数 :contentReference[oaicite:1]{index=1}
-    const cpuEl = document.querySelector('#cpu .value');
-    const cpuCores = navigator.hardwareConcurrency || 1;
-    cpuEl.textContent = cpuCores;
-
-    // 3. GPU 厂商 & 渲染器 :contentReference[oaicite:2]{index=2}
-    const gpuVendEl = document.querySelector('#gpuVend .value');
-    const gpuRendEl = document.querySelector('#gpuRend .value');
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl', { failIfMajorPerformanceCaveat: true });
-    let vendor = 'Unknown', renderer = 'Unknown';
-    if (gl) {
-      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-      if (dbg) {
-        vendor   = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL);
-        renderer = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
-      }
-    }
-    gpuVendEl.textContent = vendor;
-    gpuRendEl.textContent = renderer;
-
-    // 4. 使用 detect-gpu 执行微基准，获取 tier 和 fps :contentReference[oaicite:3]{index=3}
-    const tierEl  = document.querySelector('#tier .value');
-    const fpsEl   = document.querySelector('#fps .value');
-    const scoreEl = document.querySelector('#score .value');
-
+  <script>
     (async () => {
-      const { tier, fps } = await getGPUTier({ glContext: gl });
-      tierEl.textContent = `Tier ${tier}`;
-      fpsEl.textContent  = `${fps.toFixed(1)} FPS`;
+      // --- 1. CPU 核心数 ---
+      const cpuCores = navigator.hardwareConcurrency || 1;
+      const cpuWeight = 10;
+      const cpuScore  = cpuCores * cpuWeight;
 
-      // 5. 简单复合评分示例：cpuCores + tier*10
-      const score = cpuCores + tier * 10;
-      scoreEl.textContent = score.toFixed(1);
+      document.getElementById('cpu-cores').textContent = cpuCores;
+      document.getElementById('cpu-weight').textContent = cpuWeight;
+      document.getElementById('cpu-score').textContent  = cpuScore.toFixed(1);
+
+      // --- 2. 设备类型及其权重 ---
+      // 优先尝试 Client Hints
+      let deviceType = 'desktop';
+      if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+        deviceType = navigator.userAgentData.mobile ? 'mobile' : 'desktop';
+      } else {
+        const ua = navigator.userAgent;
+        if (/Tablet|iPad/.test(ua))      deviceType = 'tablet';
+        else if (/Mobile|Android|iPhone/.test(ua)) deviceType = 'mobile';
+      }
+      // 定义类型权重
+      const typeWeights = { mobile: 1, tablet: 2, desktop: 3, server: 4 };
+      const typeWeight  = typeWeights[deviceType] || 3;
+      const typeScore   = typeWeight * 5;  // 统一乘 5
+
+      document.getElementById('device-type').textContent = deviceType;
+      document.getElementById('type-weight').textContent = typeWeight;
+      document.getElementById('type-score').textContent  = typeScore.toFixed(1);
+
+      // --- 3. GPU Tier ---
+      // 这里不做实时测帧，仅示例固定 Tier
+      // 如果需要实时测帧，请用 detect-gpu.getGPUTier()
+      const gpuTier   = 3;  // 假设检测得 Tier 3
+      const gpuWeight = 5;
+      const gpuScore  = gpuTier * gpuWeight;
+
+      document.getElementById('gpu-tier').textContent = gpuTier;
+      document.getElementById('gpu-weight').textContent = gpuWeight;
+      document.getElementById('gpu-score').textContent  = gpuScore.toFixed(1);
+
+      // --- 4. 计算并显示综合得分 ---
+      const finalScore = cpuScore + typeScore + gpuScore;
+      document.getElementById('final-score').textContent = '综合得分：' + finalScore.toFixed(1);
     })();
   </script>
 </body>
