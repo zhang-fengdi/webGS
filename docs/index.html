@@ -84,8 +84,8 @@
       document.getElementById('final-score').textContent = '综合得分：' + finalScore.toFixed(1);
 
       // 6. Sigmoid 映射到 [0,1]
-      const midpoint  = 200;
-      const steepness = 0.005;
+      const midpoint  = 250;
+      const steepness = 0.01;
       const mapped    = 1 / (1 + Math.exp(-steepness * (finalScore - midpoint)));
       document.getElementById('mapped-score').textContent = '映射得分 (0–1)：' + mapped.toFixed(3);
 
