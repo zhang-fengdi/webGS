@@ -14,17 +14,17 @@
   }
   </script>
   <style>
-    body { background:#f5f5f5;color:#333;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:16px;display:flex;justify-content:center; }
-    #tab-container { width:600px;background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);overflow:hidden; }
-    #scene-tabs { display:flex;background:linear-gradient(90deg,#ececec,#f9f9f9);border-bottom:1px solid #ddd; }
-    #scene-tabs button { flex:1;padding:12px 0;background:transparent;border:none;font-size:14px;font-weight:500;color:#666;cursor:pointer;transition:background 0.2s,color 0.2s; }
-    #scene-tabs button:hover { background:#f0f0f0; }
-    #scene-tabs button.active { background:#fff;color:#000;box-shadow:inset 0 -3px 0 #0078d4; }
-    #mode-control { width:100%;padding:12px 0;display:flex;justify-content:center;align-items:center;background:#fafafa;border-bottom:1px solid #ddd;gap:8px; }
-    #mode-control label { font-weight:500; }
-    #mode-control input[type="range"] { width:80%;max-width:400px; }
-    #viewer-container { width:100%;height:300px;background:#000;position:relative; }
-    #status-hint { position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,0.6);color:#fff;font-size:12px;padding:4px 10px;border-radius:4px;pointer-events:none;user-select:none;display:none; }
+    body { background: #f5f5f5; color: #333; font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 16px; display: flex; justify-content: center; }
+    #tab-container { width: 600px; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
+    #scene-tabs { display: flex; background: linear-gradient(90deg, #ececec, #f9f9f9); border-bottom: 1px solid #ddd; }
+    #scene-tabs button { flex: 1; padding: 12px 0; background: transparent; border: none; font-size: 14px; font-weight: 500; color: #666; cursor: pointer; transition: background 0.2s, color 0.2s; }
+    #scene-tabs button:hover { background: #f0f0f0; }
+    #scene-tabs button.active { background: #fff; color: #000; box-shadow: inset 0 -3px 0 #0078d4; }
+    #mode-control { width: 100%; padding: 12px 0; display: flex; justify-content: center; align-items: center; background: #fafafa; border-bottom: 1px solid #ddd; gap: 8px; }
+    #mode-control label { font-weight: 500; }
+    #mode-control input[type="range"] { width: 80%; max-width: 400px; }
+    #viewer-container { width: 100%; height: 300px; background: #000; position: relative; }
+    #status-hint { position: absolute; right: 8px; bottom: 8px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 12px; padding: 4px 10px; border-radius: 4px; pointer-events: none; user-select: none; display: none; }
   </style>
 </head>
 <body>
@@ -42,72 +42,103 @@
     import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
 
     /* ---------- 配置 ---------- */
-    const config={
-      baseUrl:'https://controlgs-data-1369614263.cos.ap-guangzhou.myqcloud.com/',
-      scenes:['bicycle','room','playroom','chair','lego'],
-      suffixes:['_1e-6','_9e-7','_8e-7'],
-      modeLabels:['1e-6','9e-7','8e-7']
+    const config = {
+      baseUrl: 'https://controlgs-data-1369614263.cos.ap-guangzhou.myqcloud.com/',
+      scenes: ['bicycle', 'bonsai', 'playroom', 'chair', 'lego'],
+      suffixes: ['_1e-7', '_2e-7', '_3e-7', '_4e-7', '_5e-7', '_6e-7', '_7e-7', '_8e-7', '_9e-7', '_1e-6'],
+      modeLabels: ['1e-7', '2e-7', '3e-7', '4e-7', '5e-7', '6e-7', '7e-7', '8e-7', '9e-7', '1e-6'],
+      // 为每个场景指定不同的相机位姿和背景颜色
+      sceneCameraPositions: [
+        { position: [-1.27716, 0.53441, -0.83316], lookAt: [0.71582, 1.70817, 0.55085], cameraUp: [-0.04772, -0.97936, -0.19643], backgroundColor: '#000000' },
+        { position: [1.74473, 2.20126, -0.96763], lookAt: [0.46452, 1.82883, 1.45494], cameraUp: [-0.14246, -0.92664, -0.34792], backgroundColor: '#000000' },
+        { position: [-2.17826, 2.60359, -0.79266], lookAt: [0.40000, 1.90000, 1.40000], cameraUp: [-0.11294, -0.87587, -0.46914], backgroundColor: '#000000' },
+        { position: [0.11316, -2.48177, 0.93802], lookAt: [0.03972, 0.33785, -0.20732], cameraUp: [0.01468, 0.07312, 0.99722], backgroundColor: '#FFFFFF' },
+        { position: [0.00980, 2.48200, 1.32968], lookAt: [0.07897, -0.17354, -0.17532], cameraUp: [-0.02215, 0.45802, 0.88866], backgroundColor: '#FFFFFF' },
+      ]
     };
-    const {scenes,suffixes,modeLabels}=config;
+
+    const { scenes, suffixes, modeLabels, sceneCameraPositions } = config;
 
     /* ---------- URL 参数 ---------- */
-    const p=new URLSearchParams(location.search);
-    let sceneIndex=+p.get('scene')||0; let modeIndex=+p.get('mode');
-    if(isNaN(modeIndex)||modeIndex<0||modeIndex>=suffixes.length) modeIndex=0;
+    const p = new URLSearchParams(location.search);
+    let sceneIndex = +p.get('scene') || 0;
+    let modeIndex = +p.get('mode');
+    if (isNaN(modeIndex) || modeIndex < 0 || modeIndex >= suffixes.length) modeIndex = 0;
 
     /* ---------- UI 元素 ---------- */
-    const tabs=document.getElementById('scene-tabs');
-    tabs.innerHTML=scenes.map((n,i)=>`<button data-i="${i}">${n}</button>`).join('');
-    tabs.querySelectorAll('button').forEach(b=>{
-      if(+b.dataset.i===sceneIndex) b.classList.add('active');
-      b.onclick=()=>location.search=`?scene=${b.dataset.i}&mode=${modeIndex}`;
+    const tabs = document.getElementById('scene-tabs');
+    tabs.innerHTML = scenes.map((n, i) => `<button data-i="${i}">${n}</button>`).join('');
+    tabs.querySelectorAll('button').forEach(b => {
+      if (+b.dataset.i === sceneIndex) b.classList.add('active');
+      b.onclick = () => location.search = `?scene=${b.dataset.i}&mode=${modeIndex}`;
     });
-    const slider=document.getElementById('modeSlider');
-    const label =document.getElementById('modeLabel');
-    slider.min=0;slider.max=suffixes.length-1;slider.step=1;slider.value=modeIndex;
-    const upd=v=>label.textContent=modeLabels[v]||suffixes[v]||v; upd(modeIndex);
-    slider.oninput=e=>upd(+e.target.value);
-    slider.onchange=e=>location.search=`?scene=${sceneIndex}&mode=${+e.target.value}`;
+    const slider = document.getElementById('modeSlider');
+    const label = document.getElementById('modeLabel');
+    slider.min = 0;
+    slider.max = suffixes.length - 1;
+    slider.step = 1;
+    slider.value = 2;
+    const upd = v => label.textContent = modeLabels[v] || suffixes[v] || v;
+    upd(modeIndex);
+    slider.oninput = e => upd(+e.target.value);
+    slider.onchange = e => location.search = `?scene=${sceneIndex}&mode=${+e.target.value}`;
 
     /* ---------- Viewer ---------- */
-    const viewer=new GaussianSplats3D.Viewer({rootElement:document.getElementById('viewer-container'),sharedMemoryForWorkers:false,freeIntermediateSplatData:true,cameraUp:[0.01933,-0.75830,-0.65161],initialCameraPosition:[1.54163,2.68515,-6.37228],initialCameraLookAt:[0.45622,1.95338,1.51278],sphericalHarmonicsDegree:2});
+    const viewer = new GaussianSplats3D.Viewer({
+      rootElement: document.getElementById('viewer-container'),
+      sharedMemoryForWorkers: false,
+      freeIntermediateSplatData: true,
+      cameraUp: sceneCameraPositions[sceneIndex].cameraUp,
+      initialCameraPosition: sceneCameraPositions[sceneIndex].position,
+      initialCameraLookAt: sceneCameraPositions[sceneIndex].lookAt,
+      sphericalHarmonicsDegree: 2
+    });
+
+    // 设置背景颜色
+    viewer.renderer.setClearColor(sceneCameraPositions[sceneIndex].backgroundColor);
+
     viewer.start();
 
     /* ---------- 状态提示 & UI 锁 ---------- */
-    const hint=document.getElementById('status-hint');
-    const setHint=(t,show)=>{hint.textContent=t;hint.style.display=show?'block':'none';};
-    const lockUI=lock=>{tabs.querySelectorAll('button').forEach(b=>b.disabled=lock);slider.disabled=lock;};
+    const hint = document.getElementById('status-hint');
+    const setHint = (t, show) => { hint.textContent = t; hint.style.display = show ? 'block' : 'none'; };
+    const lockUI = lock => { tabs.querySelectorAll('button').forEach(b => b.disabled = lock); slider.disabled = lock; };
 
     /* ---------- 加载逻辑 ---------- */
-    async function loadScene(url,fmt){
-      const cache=await caches.open('3d-model-cache');
-      const hit=await cache.match(url);
-      if(hit){ setHint('',false); lockUI(false);
-        const blob=await hit.blob();
-        await viewer.addSplatScene(URL.createObjectURL(blob),{format:fmt,progressiveLoad:false,showLoadingUI:true});
-        return; }
+    async function loadScene(url, fmt) {
+      const cache = await caches.open('3d-model-cache');
+      const hit = await cache.match(url);
+      if (hit) {
+        setHint('', false);
+        lockUI(false);
+        const blob = await hit.blob();
+        await viewer.addSplatScene(URL.createObjectURL(blob), { format: fmt, progressiveLoad: false, showLoadingUI: true });
+        return;
+      }
 
       /* ---- 第一次：边下载边渲染 ---- */
-      viewer.addSplatScene(url,{format:fmt,progressiveLoad:true,showLoadingUI:true}).catch(console.error);
+      viewer.addSplatScene(url, { format: fmt, progressiveLoad: true, showLoadingUI: true }).catch(console.error);
 
       /* 并行后台 fetch 用于缓存 */
-      (async()=>{
-        try{
-          const resp=await fetch(url,{cache:'reload',keepalive:true});
-          if(!resp.ok) throw new Error(resp.status);
+      (async () => {
+        try {
+          const resp = await fetch(url, { cache: 'reload', keepalive: true });
+          if (!resp.ok) throw new Error(resp.status);
           /* 下载已完成，切换到缓存阶段 */
-          setHint('Caching model…',true);
-          await cache.put(url,resp.clone());
-        }catch(e){console.warn('Cache failed',e);}finally{
-          setHint('',false);
+          setHint('Caching model…', true);
+          await cache.put(url, resp.clone());
+        } catch (e) {
+          console.warn('Cache failed', e);
+        } finally {
+          setHint('', false);
         }
       })();
     }
 
     /* ---------- 启动 ---------- */
-    (async()=>{
-      const file=scenes[sceneIndex]+suffixes[modeIndex]+'.ply';
-      await loadScene(config.baseUrl+file,GaussianSplats3D.SceneFormat.Ply);
+    (async () => {
+      const file = scenes[sceneIndex] + suffixes[modeIndex] + '.ply';
+      await loadScene(config.baseUrl + file, GaussianSplats3D.SceneFormat.Ply);
     })();
   </script>
 </body>

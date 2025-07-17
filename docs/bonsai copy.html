@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3DGS 高级选项卡＋滑块（渐进加载&缓存）</title>
+  <script type="text/javascript" src="js/util.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./lib/three.module.js",
+      "@mkkellogg/gaussian-splats-3d": "./lib/gaussian-splats-3d.module.js"
+    }
+  }
+  </script>
+  <style>
+    body { background:#f5f5f5;color:#333;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:16px;display:flex;justify-content:center; }
+    #tab-container { width:600px;background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);overflow:hidden; }
+    #scene-tabs { display:flex;background:linear-gradient(90deg,#ececec,#f9f9f9);border-bottom:1px solid #ddd; }
+    #scene-tabs button { flex:1;padding:12px 0;background:transparent;border:none;font-size:14px;font-weight:500;color:#666;cursor:pointer;transition:background 0.2s,color 0.2s; }
+    #scene-tabs button:hover { background:#f0f0f0; }
+    #scene-tabs button.active { background:#fff;color:#000;box-shadow:inset 0 -3px 0 #0078d4; }
+    #mode-control { width:100%;padding:12px 0;display:flex;justify-content:center;align-items:center;background:#fafafa;border-bottom:1px solid #ddd;gap:8px; }
+    #mode-control label { font-weight:500; }
+    #mode-control input[type="range"] { width:80%;max-width:400px; }
+    #viewer-container { width:100%;height:300px;background:#000;position:relative; }
+    #status-hint { position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,0.6);color:#fff;font-size:12px;padding:4px 10px;border-radius:4px;pointer-events:none;user-select:none;display:none; }
+  </style>
+</head>
+<body>
+  <div id="tab-container">
+    <div id="scene-tabs"></div>
+    <div id="mode-control">
+      <label for="modeSlider">Lambda：</label>
+      <input type="range" id="modeSlider" />
+      <span id="modeLabel"></span>
+    </div>
+    <div id="viewer-container"><div id="status-hint"></div></div>
+  </div>
+
+  <script type="module">
+    import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
+
+    /* ---------- 配置 ---------- */
+    const config={
+      baseUrl:'https://controlgs-data-1369614263.cos.ap-guangzhou.myqcloud.com/',
+      scenes:['bicycle','room','playroom','chair','lego'],
+      suffixes:['_1e-6','_9e-7','_8e-7'],
+      modeLabels:['1e-6','9e-7','8e-7']
+    };
+    const {scenes,suffixes,modeLabels}=config;
+
+    /* ---------- URL 参数 ---------- */
+    const p=new URLSearchParams(location.search);
+    let sceneIndex=+p.get('scene')||0; let modeIndex=+p.get('mode');
+    if(isNaN(modeIndex)||modeIndex<0||modeIndex>=suffixes.length) modeIndex=0;
+
+    /* ---------- UI 元素 ---------- */
+    const tabs=document.getElementById('scene-tabs');
+    tabs.innerHTML=scenes.map((n,i)=>`<button data-i="${i}">${n}</button>`).join('');
+    tabs.querySelectorAll('button').forEach(b=>{
+      if(+b.dataset.i===sceneIndex) b.classList.add('active');
+      b.onclick=()=>location.search=`?scene=${b.dataset.i}&mode=${modeIndex}`;
+    });
+    const slider=document.getElementById('modeSlider');
+    const label =document.getElementById('modeLabel');
+    slider.min=0;slider.max=suffixes.length-1;slider.step=1;slider.value=modeIndex;
+    const upd=v=>label.textContent=modeLabels[v]||suffixes[v]||v; upd(modeIndex);
+    slider.oninput=e=>upd(+e.target.value);
+    slider.onchange=e=>location.search=`?scene=${sceneIndex}&mode=${+e.target.value}`;
+
+    /* ---------- Viewer ---------- */
+    const viewer=new GaussianSplats3D.Viewer({rootElement:document.getElementById('viewer-container'),sharedMemoryForWorkers:false,freeIntermediateSplatData:true,cameraUp:[0.01933,-0.75830,-0.65161],initialCameraPosition:[1.54163,2.68515,-6.37228],initialCameraLookAt:[0.45622,1.95338,1.51278],sphericalHarmonicsDegree:2});
+    viewer.start();
+
+    /* ---------- 状态提示 & UI 锁 ---------- */
+    const hint=document.getElementById('status-hint');
+    const setHint=(t,show)=>{hint.textContent=t;hint.style.display=show?'block':'none';};
+    const lockUI=lock=>{tabs.querySelectorAll('button').forEach(b=>b.disabled=lock);slider.disabled=lock;};
+
+    /* ---------- 加载逻辑 ---------- */
+    async function loadScene(url,fmt){
+      const cache=await caches.open('3d-model-cache');
+      const hit=await cache.match(url);
+      if(hit){ setHint('',false); lockUI(false);
+        const blob=await hit.blob();
+        await viewer.addSplatScene(URL.createObjectURL(blob),{format:fmt,progressiveLoad:false,showLoadingUI:true});
+        return; }
+
+      /* ---- 第一次：边下载边渲染 ---- */
+      viewer.addSplatScene(url,{format:fmt,progressiveLoad:true,showLoadingUI:true}).catch(console.error);
+
+      /* 并行后台 fetch 用于缓存 */
+      (async()=>{
+        try{
+          const resp=await fetch(url,{cache:'reload',keepalive:true});
+          if(!resp.ok) throw new Error(resp.status);
+          /* 下载已完成，切换到缓存阶段 */
+          setHint('Caching model…',true);
+          await cache.put(url,resp.clone());
+        }catch(e){console.warn('Cache failed',e);}finally{
+          setHint('',false);
+        }
+      })();
+    }
+
+    /* ---------- 启动 ---------- */
+    (async()=>{
+      const file=scenes[sceneIndex]+suffixes[modeIndex]+'.ply';
+      await loadScene(config.baseUrl+file,GaussianSplats3D.SceneFormat.Ply);
+    })();
+  </script>
+</body>
+</html>
