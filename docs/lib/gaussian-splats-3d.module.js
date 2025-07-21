@@ -12946,6 +12946,13 @@ class Viewer {
      */
     addSplatScene(path, options = {}) {
 
+        this.showInfo = !this.showInfo;
+        if (this.showInfo) {
+            this.infoPanel.show();
+        } else {
+            this.infoPanel.hide();
+        }
+
         if (this.isLoadingOrUnloading()) {
             throw new Error('Cannot add splat scene while another load or unload is already in progress.');
         }

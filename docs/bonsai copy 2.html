@@ -61,42 +61,16 @@
       border-bottom: 1px solid #ddd;
       gap: 8px;
     }
-    #mode-control label { 
-      font-weight: 500;
-      margin-right: -14px;
-      margin-top: -4px; /* 微调 Lambda 标签的纵向位置，向上移动 */
-    }
-    #mode-control span {
-      margin-left: -6px; /* 给 Lambda 数值增加一点左边间距 */
-      margin-top: -4px; /* 微调 Lambda 数值的位置，向上移动 */
-    }
+    #mode-control label { font-weight: 500; }
     #mode-control input[type="range"] {
       width: 80%;
       max-width: 400px;
-    }
-    #mode-control input[type="checkbox"] {
-      margin-left: 12px; /* 给复选框添加左间距 */
-      margin-top: 3px; /* 微调 Auto 复选框的位置，向上移动 */
     }
     #viewer-container {
       width: 100%;
       height: 400px;
       background: #000;
       position: relative;
-    }
-    #mode-control .auto-container {
-      display: flex;
-      align-items: center; /* 保证 Auto 标签和复选框在垂直方向居中 */
-      margin-left: 12px; /* 微调 Auto 容器的左边距 */
-    }
-
-    #mode-control .auto-container label {
-      margin-left: 0px; /* 给 Auto 标签增加左间距 */
-      margin-top: -4px;   /* 调整 Auto 标签的垂直位置，避免使用大的负值 */
-    }
-
-    #mode-control .auto-container input[type="checkbox"] {
-      margin-left: 18px; /* 控制 Auto 复选框与标签之间的间距 */
     }
 
     /* Status Hint: 右下角 */
@@ -197,10 +171,6 @@
       <label for="modeSlider">Lambda：</label>
       <input type="range" id="modeSlider" />
       <span id="modeLabel"></span>
-      <div class="auto-container">
-        <label for="auto-checkbox">Auto</label>
-        <input type="checkbox" id="auto-checkbox">
-      </div>
     </div>
     <div id="viewer-container">
       <!-- 左上角控制提示 -->
@@ -242,7 +212,6 @@
 
   <script type="module">
     import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
-    import { getRenderScores } from './performanceScores.js';  // 导入性能评分函数
 
     const config = {
       baseUrl: 'https://controlgs-data-1369614263.cos.ap-guangzhou.myqcloud.com/',
@@ -275,7 +244,6 @@
     const tabs   = document.getElementById('scene-tabs');
     const slider = document.getElementById('modeSlider');
     const label  = document.getElementById('modeLabel');
-    const autoCheckbox = document.getElementById('auto-checkbox');
     tabs.innerHTML = scenes.map((n,i)=>`<button data-i="${i}">${n}</button>`).join('');
     tabs.querySelectorAll('button').forEach(b=>{
       if (+b.dataset.i===sceneIndex) b.classList.add('active');
@@ -333,54 +301,6 @@
           setHint('', false);
         }
       })();
-    }
-
-    // Auto checkbox logic
-    autoCheckbox.addEventListener('change', async () => {
-      if (autoCheckbox.checked) {
-       // Call the getRenderScores function to get all performance scores
-        const scores = await getRenderScores(); // This will return an object with all scores
-
-        // Show the performance scores in an alert box
-        alert(`
-        Performance Scores:
-        CPU Cores: ${scores.cpuCores}
-        Device Type: ${scores.deviceType}
-        Benchmark FPS: ${scores.fps.toFixed(1)}
-        Mapped Score (0–1): ${scores.mappedScore}
-        Recommended Lambda: ${scores.recommendedLambda}
-        `);
-        
-        // Use the returned lambda value
-        const lambdaValue = scores.recommendedLambda;
-
-        // Set slider value and lock it
-        modeIndex = modeLabels.indexOf(lambdaValue.toString());
-        slider.value = modeIndex;
-        slider.disabled = true;
-        label.textContent = lambdaValue;
-
-        // Automatically change scene
-        location.search = `?scene=${sceneIndex}&mode=${modeIndex}`;
-        
-        // Save the slider disabled state and checkbox state
-        localStorage.setItem('sliderDisabled', 'true');
-        localStorage.setItem('autoChecked', 'true');
-      } else {
-        slider.disabled = false;
-
-        // Remove slider disabled state from localStorage
-        localStorage.removeItem('sliderDisabled');
-        localStorage.removeItem('autoChecked');
-      }
-    });
-
-    // Check slider state and checkbox state on page load (after refresh)
-    if (localStorage.getItem('sliderDisabled') === 'true') {
-      slider.disabled = true;
-    }
-    if (localStorage.getItem('autoChecked') === 'true') {
-      autoCheckbox.checked = true;
     }
 
     (async()=>{
