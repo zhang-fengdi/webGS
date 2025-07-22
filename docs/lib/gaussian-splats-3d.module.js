@@ -13873,13 +13873,19 @@ class Viewer {
 
         let lastCalcTime = getCurrentTime();
         let frameCount = 0;
+        let maxFPS = 0;
 
         return function() {
             if (this.consecutiveRenderFrames > CONSECUTIVE_RENDERED_FRAMES_FOR_FPS_CALCULATION) {
                 const currentTime = getCurrentTime();
                 const calcDelta = currentTime - lastCalcTime;
                 if (calcDelta >= 1.0) {
-                    this.currentFPS = (frameCount / calcDelta).toFixed(3); // mark
+                    // this.currentFPS = (frameCount / calcDelta).toFixed(3); // mark
+
+                    const currentFPS = (frameCount / calcDelta).toFixed(3); // mark
+                    maxFPS = Math.max(maxFPS, currentFPS);
+                    this.currentFPS = `${currentFPS} (max: ${maxFPS.toFixed(3)})`; // dislay: current FPS (max FPS)
+
                     frameCount = 0;
                     lastCalcTime = currentTime;
                 } else {
