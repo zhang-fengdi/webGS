@@ -13879,7 +13879,7 @@ class Viewer {
                 const currentTime = getCurrentTime();
                 const calcDelta = currentTime - lastCalcTime;
                 if (calcDelta >= 1.0) {
-                    this.currentFPS = frameCount;
+                    this.currentFPS = (frameCount / calcDelta).toFixed(3); // mark
                     frameCount = 0;
                     lastCalcTime = currentTime;
                 } else {
