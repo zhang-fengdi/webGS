@@ -13869,15 +13869,16 @@ class Viewer {
         this.init();
     }
 
-    updateFPS = function() {
+    updateFPS = function () {
 
         let lastCalcTime = getCurrentTime();
         let frameCount = 0;
-        let maxFPS = 0;
-        let timeElapsed = 0;  // Track the elapsed time
-        let maxFPSEnd = false; // Flag to indicate if max FPS updating should stop
+        let fpsValues = [];  // Store FPS values
+        let timeElapsed = 0;  // Track elapsed time
+        let medianFPSEnd = false; // Flag to stop updating median
+        let medianFPS = 0;  // Variable to store median FPS
 
-        return function() {
+        return function () {
             if (this.consecutiveRenderFrames > CONSECUTIVE_RENDERED_FRAMES_FOR_FPS_CALCULATION) {
                 const currentTime = getCurrentTime();
                 const calcDelta = currentTime - lastCalcTime;
@@ -13885,16 +13886,22 @@ class Viewer {
                 // Update FPS every second
                 if (calcDelta >= 0.5) {
                     const currentFPS = (frameCount / calcDelta).toFixed(3); // Calculate current FPS
-                    if (!maxFPSEnd) {
-                        maxFPS = Math.max(maxFPS, currentFPS); // Only update max FPS before 10 seconds
+
+                    // Calculate median FPS only after 15 seconds
+                    if (!medianFPSEnd) {
+                        fpsValues.push(parseFloat(currentFPS));  // Store current FPS value
+                        const sortedFPS = fpsValues.sort((a, b) => a - b);  // Sort FPS array
+                        medianFPS = sortedFPS.length % 2 === 0 ?
+                            (sortedFPS[sortedFPS.length / 2 - 1] + sortedFPS[sortedFPS.length / 2]) / 2 :
+                            sortedFPS[Math.floor(sortedFPS.length / 2)];
                     }
 
-                    // After 15 seconds, stop updating max FPS and add the check mark
+                    // After 15 seconds, stop updating median
                     if (timeElapsed >= 15) {
-                        this.currentFPS = `${currentFPS} (max: ${maxFPS.toFixed(3)}) ✔`;
-                        maxFPSEnd = true; // Stop updating max FPS
+                        this.currentFPS = `${currentFPS} (median: ${medianFPS.toFixed(3)}) ✔`;
+                        medianFPSEnd = true;  // Stop updating median
                     } else {
-                        this.currentFPS = `${currentFPS} (max: ${maxFPS.toFixed(3)})`;
+                        this.currentFPS = `${currentFPS} (median: ${medianFPS.toFixed(3)})`;
                     }
 
                     frameCount = 0;
