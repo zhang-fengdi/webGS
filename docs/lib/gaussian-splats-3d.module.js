@@ -13874,20 +13874,34 @@ class Viewer {
         let lastCalcTime = getCurrentTime();
         let frameCount = 0;
         let maxFPS = 0;
+        let timeElapsed = 0;  // Track the elapsed time
+        let maxFPSEnd = false; // Flag to indicate if max FPS updating should stop
 
         return function() {
             if (this.consecutiveRenderFrames > CONSECUTIVE_RENDERED_FRAMES_FOR_FPS_CALCULATION) {
                 const currentTime = getCurrentTime();
                 const calcDelta = currentTime - lastCalcTime;
-                if (calcDelta >= 1.0) {
-                    // this.currentFPS = (frameCount / calcDelta).toFixed(3); // mark
 
-                    const currentFPS = (frameCount / calcDelta).toFixed(3); // mark
-                    maxFPS = Math.max(maxFPS, currentFPS);
-                    this.currentFPS = `${currentFPS} (max: ${maxFPS.toFixed(3)})`; // dislay: current FPS (max FPS)
+                // Update FPS every second
+                if (calcDelta >= 0.5) {
+                    const currentFPS = (frameCount / calcDelta).toFixed(3); // Calculate current FPS
+                    if (!maxFPSEnd) {
+                        maxFPS = Math.max(maxFPS, currentFPS); // Only update max FPS before 10 seconds
+                    }
+
+                    // After 15 seconds, stop updating max FPS and add the check mark
+                    if (timeElapsed >= 15) {
+                        this.currentFPS = `${currentFPS} (max: ${maxFPS.toFixed(3)}) ✔`;
+                        maxFPSEnd = true; // Stop updating max FPS
+                    } else {
+                        this.currentFPS = `${currentFPS} (max: ${maxFPS.toFixed(3)})`;
+                    }
 
                     frameCount = 0;
                     lastCalcTime = currentTime;
+
+                    // Accumulate elapsed time
+                    timeElapsed += calcDelta;
                 } else {
                     frameCount++;
                 }
